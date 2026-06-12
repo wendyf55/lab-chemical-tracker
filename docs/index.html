@@ -196,7 +196,8 @@
           <div class="row">
             <div>
               <label for="new-name">Name</label>
-              <input id="new-name" placeholder="e.g. Caffeine">
+              <input id="new-name" placeholder="e.g. Caffeine" list="name-suggestions" autocomplete="off">
+              <datalist id="name-suggestions"></datalist>
             </div>
             <div>
               <label for="new-unit">Unit</label>
@@ -219,6 +220,9 @@
             <tr>
               <th>Chemical</th>
               <th>Amount</th>
+              <th>Formula</th>
+              <th>MW (g/mol)</th>
+              <th>Density</th>
             </tr>
           </thead>
           <tbody id="inventory-body"></tbody>
@@ -267,8 +271,14 @@
         .map((c) => `<option value="${c.id}">${c.name}</option>`)
         .join("");
       $("inventory-body").innerHTML = chemicals
-        .map((c) => `<tr><td>${c.name}</td><td>${+c.total.toFixed(4)} ${c.unit}</td></tr>`)
-        .join("") || `<tr><td colspan="2">No chemicals yet — add one above.</td></tr>`;
+        .map((c) => `<tr>
+          <td>${c.name}</td>
+          <td>${+c.total.toFixed(4)} ${c.unit}</td>
+          <td>${c.formula ?? "—"}</td>
+          <td>${c.mol_weight ?? "—"}</td>
+          <td>${c.density ?? "—"}</td>
+        </tr>`)
+        .join("") || `<tr><td colspan="5">No chemicals yet — add one above.</td></tr>`;
     }
 
     $("login-btn").onclick = async () => {
@@ -327,6 +337,25 @@
     };
 
     $("logout").onclick = logout;
+
+    // PubChem name autocomplete (called directly from the browser; PubChem allows CORS)
+    let acTimer;
+    $("new-name").addEventListener("input", () => {
+      clearTimeout(acTimer);
+      const q = $("new-name").value.trim();
+      if (q.length < 3) return;
+      acTimer = setTimeout(async () => {
+        try {
+          const r = await fetch(
+            `https://pubchem.ncbi.nlm.nih.gov/rest/autocomplete/compound/${encodeURIComponent(q)}/json?limit=8`
+          );
+          const terms = (await r.json()).dictionary_terms?.compound ?? [];
+          $("name-suggestions").innerHTML = terms
+            .map((t) => `<option value="${t}">`)
+            .join("");
+        } catch { /* suggestions are optional */ }
+      }, 250);
+    });
 
     // auto-login if token still valid
     if (token) {
