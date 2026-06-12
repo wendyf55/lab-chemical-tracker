@@ -144,6 +144,15 @@
       display: none;
     }
 
+    .delete-btn {
+      background: none;
+      color: #dc2626;
+      border: 0;
+      padding: .2rem .4rem;
+      margin: 0;
+      font-size: .9rem;
+    }
+
     #logout {
       float: right;
       background: none;
@@ -224,6 +233,7 @@
               <th>MW (g/mol)</th>
               <th>Density</th>
               <th>SDS</th>
+              <th></th>
             </tr>
           </thead>
           <tbody id="inventory-body"></tbody>
@@ -281,8 +291,19 @@
           <td>${c.cid
             ? `<a href="https://pubchem.ncbi.nlm.nih.gov/compound/${c.cid}#datasheet=LCSS" target="_blank" rel="noopener">SDS ↗</a>`
             : "—"}</td>
+          <td><button class="delete-btn" data-id="${c.id}" data-name="${c.name}" title="Delete">✕</button></td>
         </tr>`)
-        .join("") || `<tr><td colspan="6">No chemicals yet — add one above.</td></tr>`;
+        .join("") || `<tr><td colspan="7">No chemicals yet — add one above.</td></tr>`;
+      document.querySelectorAll(".delete-btn").forEach((btn) => {
+        btn.onclick = async () => {
+          if (!confirm(`Delete ${btn.dataset.name} and its entire history? This can't be undone.`)) return;
+          $("app-error").textContent = "";
+          try {
+            await api(`/chemicals/${btn.dataset.id}`, { method: "DELETE" });
+            await refresh();
+          } catch (e) { $("app-error").textContent = e.message; }
+        };
+      });
     }
 
     $("login-btn").onclick = async () => {
