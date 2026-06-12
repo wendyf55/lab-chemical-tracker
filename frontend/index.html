@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lab Chemical Tracker</title>
+  <style>
+    :root {
+      --accent: #2563eb;
+      --bg: #f8fafc;
+      --border: #e2e8f0;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: system-ui, sans-serif;
+      background: var(--bg);
+      margin: 0;
+      padding: 2rem 1rem;
+      display: flex;
+      justify-content: center;
+    }
+
+    main {
+      width: 100%;
+      max-width: 640px;
+    }
+
+    h1 {
+      font-size: 1.4rem;
+    }
+
+    .card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+
+    label {
+      display: block;
+      font-size: .85rem;
+      margin: .6rem 0 .2rem;
+      color: #475569;
+    }
+
+    input,
+    select {
+      width: 100%;
+      padding: .5rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 1rem;
+    }
+
+    button {
+      padding: .55rem 1rem;
+      border: 0;
+      border-radius: 6px;
+      background: var(--accent);
+      color: #fff;
+      font-size: .95rem;
+      cursor: pointer;
+      margin-top: .8rem;
+    }
+
+    button.secondary {
+      background: #fff;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+    }
+
+    .row {
+      display: flex;
+      gap: .75rem;
+      align-items: end;
+      flex-wrap: wrap;
+    }
+
+    .row>div {
+      flex: 1;
+      min-width: 120px;
+    }
+
+    .toggle {
+      display: flex;
+      gap: 0;
+      margin-top: .2rem;
+    }
+
+    .toggle button {
+      flex: 1;
+      margin: 0;
+      border-radius: 0;
+      background: #e2e8f0;
+      color: #334155;
+    }
+
+    .toggle button:first-child {
+      border-radius: 6px 0 0 6px;
+    }
+
+    .toggle button:last-child {
+      border-radius: 0 6px 6px 0;
+    }
+
+    .toggle button.active {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: .5rem;
+    }
+
+    th,
+    td {
+      text-align: left;
+      padding: .5rem .6rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      font-size: .8rem;
+      text-transform: uppercase;
+      color: #64748b;
+    }
+
+    .error {
+      color: #dc2626;
+      font-size: .9rem;
+      margin-top: .5rem;
+      min-height: 1.2em;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    #logout {
+      float: right;
+      background: none;
+      color: #64748b;
+      border: 0;
+      font-size: .85rem;
+      margin: 0;
+    }
+  </style>
+</head>
+
+<body>
+  <main>
+    <!-- ======== LOGIN ======== -->
+    <section id="login-view" class="card">
+      <h1>Lab Chemical Tracker</h1>
+      <label for="password">Password</label>
+      <input type="password" id="password" autocomplete="current-password">
+      <button id="login-btn">Log in</button>
+      <div class="error" id="login-error"></div>
+    </section>
+
+    <!-- ======== APP ======== -->
+    <section id="app-view" class="hidden">
+      <div class="card">
+        <button id="logout">Log out</button>
+        <h1>Adjust stock</h1>
+        <div class="row">
+          <div>
+            <label for="chem-select">Chemical</label>
+            <select id="chem-select"></select>
+          </div>
+          <div>
+            <label for="amount">Amount</label>
+            <input type="number" id="amount" min="0" step="any" placeholder="0">
+          </div>
+          <div>
+            <label>Action</label>
+            <div class="toggle">
+              <button id="mode-add" class="active" type="button">Add</button>
+              <button id="mode-sub" type="button">Subtract</button>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <button id="apply-btn">Apply</button>
+          <button id="show-new-chem" class="secondary" type="button">+ Add chemical</button>
+        </div>
+        <div id="new-chem-form" class="hidden">
+          <div class="row">
+            <div>
+              <label for="new-name">Name</label>
+              <input id="new-name" placeholder="e.g. Caffeine">
+            </div>
+            <div>
+              <label for="new-unit">Unit</label>
+              <input id="new-unit" value="mg">
+            </div>
+            <div>
+              <label for="new-initial">Starting amount</label>
+              <input id="new-initial" type="number" min="0" step="any" value="0">
+            </div>
+          </div>
+          <button id="create-chem-btn">Create</button>
+        </div>
+        <div class="error" id="app-error"></div>
+      </div>
+
+      <div class="card">
+        <h1>Inventory</h1>
+        <table>
+          <thead>
+            <tr>
+              <th>Chemical</th>
+              <th>Amount</th>
+            </tr>
+          </thead>
+          <tbody id="inventory-body"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // ====== CONFIG: set this to your HF Space URL ======
+    const API = "https://wfr2-space-lab-chemical-tracker.hf.space";
+
+    let token = localStorage.getItem("token");
+    let chemicals = [];
+    let mode = "add";
+
+    const $ = (id) => document.getElementById(id);
+
+    async function api(path, opts = {}) {
+      const res = await fetch(API + path, {
+        ...opts,
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: "Bearer " + token } : {}),
+        },
+      });
+      if (res.status === 401) { logout(); throw new Error("Session expired — log in again"); }
+      if (!res.ok) throw new Error((await res.json()).detail || "Request failed");
+      return res.json();
+    }
+
+    function showApp(show) {
+      $("login-view").classList.toggle("hidden", show);
+      $("app-view").classList.toggle("hidden", !show);
+    }
+
+    function logout() {
+      token = null;
+      localStorage.removeItem("token");
+      showApp(false);
+    }
+
+    async function refresh() {
+      chemicals = await api("/chemicals");
+      $("chem-select").innerHTML = chemicals
+        .map((c) => `<option value="${c.id}">${c.name}</option>`)
+        .join("");
+      $("inventory-body").innerHTML = chemicals
+        .map((c) => `<tr><td>${c.name}</td><td>${+c.total.toFixed(4)} ${c.unit}</td></tr>`)
+        .join("") || `<tr><td colspan="2">No chemicals yet — add one above.</td></tr>`;
+    }
+
+    $("login-btn").onclick = async () => {
+      $("login-error").textContent = "";
+      try {
+        const r = await api("/login", { method: "POST", body: JSON.stringify({ password: $("password").value }) });
+        token = r.token;
+        localStorage.setItem("token", token);
+        showApp(true);
+        await refresh();
+      } catch (e) { $("login-error").textContent = e.message; }
+    };
+    $("password").addEventListener("keydown", (e) => { if (e.key === "Enter") $("login-btn").click(); });
+
+    $("mode-add").onclick = () => setMode("add");
+    $("mode-sub").onclick = () => setMode("sub");
+    function setMode(m) {
+      mode = m;
+      $("mode-add").classList.toggle("active", m === "add");
+      $("mode-sub").classList.toggle("active", m === "sub");
+    }
+
+    $("apply-btn").onclick = async () => {
+      $("app-error").textContent = "";
+      const amt = parseFloat($("amount").value);
+      const chemId = parseInt($("chem-select").value);
+      if (!chemId) return ($("app-error").textContent = "Pick a chemical first.");
+      if (!(amt > 0)) return ($("app-error").textContent = "Enter a positive amount.");
+      try {
+        await api("/transactions", {
+          method: "POST",
+          body: JSON.stringify({ chemical_id: chemId, delta: mode === "add" ? amt : -amt }),
+        });
+        $("amount").value = "";
+        await refresh();
+      } catch (e) { $("app-error").textContent = e.message; }
+    };
+
+    $("show-new-chem").onclick = () => $("new-chem-form").classList.toggle("hidden");
+
+    $("create-chem-btn").onclick = async () => {
+      $("app-error").textContent = "";
+      try {
+        await api("/chemicals", {
+          method: "POST",
+          body: JSON.stringify({
+            name: $("new-name").value,
+            unit: $("new-unit").value || "mg",
+            initial_amount: parseFloat($("new-initial").value) || 0,
+          }),
+        });
+        $("new-name").value = ""; $("new-initial").value = "0";
+        $("new-chem-form").classList.add("hidden");
+        await refresh();
+      } catch (e) { $("app-error").textContent = e.message; }
+    };
+
+    $("logout").onclick = logout;
+
+    // auto-login if token still valid
+    if (token) {
+      refresh().then(() => showApp(true)).catch(() => logout());
+    }
+  </script>
+</body>
+
+</html>
