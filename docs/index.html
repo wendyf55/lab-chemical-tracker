@@ -27,7 +27,7 @@
 
     main {
       width: 100%;
-      max-width: 640px;
+      max-width: 1100px;
     }
 
     h1 {
@@ -125,6 +125,11 @@
       text-align: left;
       padding: .5rem .6rem;
       border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
     }
 
     th {
@@ -224,6 +229,7 @@
 
       <div class="card">
         <h1>Inventory</h1>
+        <div class="table-wrap">
         <table>
           <thead>
             <tr>
@@ -238,6 +244,7 @@
           </thead>
           <tbody id="inventory-body"></tbody>
         </table>
+        </div>
       </div>
     </section>
   </main>
