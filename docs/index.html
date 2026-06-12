@@ -223,6 +223,7 @@
               <th>Formula</th>
               <th>MW (g/mol)</th>
               <th>Density</th>
+              <th>SDS</th>
             </tr>
           </thead>
           <tbody id="inventory-body"></tbody>
@@ -277,8 +278,11 @@
           <td>${c.formula ?? "—"}</td>
           <td>${c.mol_weight ?? "—"}</td>
           <td>${c.density ?? "—"}</td>
+          <td>${c.cid
+            ? `<a href="https://pubchem.ncbi.nlm.nih.gov/compound/${c.cid}#datasheet=LCSS" target="_blank" rel="noopener">SDS ↗</a>`
+            : "—"}</td>
         </tr>`)
-        .join("") || `<tr><td colspan="5">No chemicals yet — add one above.</td></tr>`;
+        .join("") || `<tr><td colspan="6">No chemicals yet — add one above.</td></tr>`;
     }
 
     $("login-btn").onclick = async () => {
