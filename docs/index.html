@@ -27,6 +27,16 @@
 
     main {
       width: 100%;
+      max-width: 1600px;
+    }
+
+    /* keep the login and adjust-stock cards compact; inventory uses full width */
+    #login-view {
+      max-width: 480px;
+      margin: 0 auto 1.25rem;
+    }
+
+    #adjust-card {
       max-width: 1100px;
     }
 
@@ -182,7 +192,7 @@
 
     <!-- ======== APP ======== -->
     <section id="app-view" class="hidden">
-      <div class="card">
+      <div class="card" id="adjust-card">
         <button id="logout">Log out</button>
         <h1>Adjust stock</h1>
         <div class="row">
@@ -193,6 +203,15 @@
           <div>
             <label for="amount">Amount</label>
             <input type="number" id="amount" min="0" step="any" placeholder="0">
+          </div>
+          <div>
+            <label for="loc-select">Location</label>
+            <select id="loc-select">
+              <option value="">—</option>
+              <option>276</option>
+              <option>534</option>
+              <option>542</option>
+            </select>
           </div>
           <div>
             <label>Action</label>
@@ -218,6 +237,15 @@
               <input id="new-unit" value="mg">
             </div>
             <div>
+              <label for="new-location">Location</label>
+              <select id="new-location">
+                <option value="">—</option>
+                <option>276</option>
+                <option>534</option>
+                <option>542</option>
+              </select>
+            </div>
+            <div>
               <label for="new-initial">Starting amount</label>
               <input id="new-initial" type="number" min="0" step="any" value="0">
             </div>
@@ -235,6 +263,7 @@
             <tr>
               <th>Chemical</th>
               <th>Amount</th>
+              <th>Location</th>
               <th>Formula</th>
               <th>MW (g/mol)</th>
               <th>Density</th>
@@ -292,6 +321,7 @@
         .map((c) => `<tr>
           <td>${c.name}</td>
           <td>${+c.total.toFixed(4)} ${c.unit}</td>
+          <td>${c.location ?? "—"}</td>
           <td>${c.formula ?? "—"}</td>
           <td>${c.mol_weight ?? "—"}</td>
           <td>${c.density ?? "—"}</td>
@@ -300,7 +330,8 @@
             : "—"}</td>
           <td><button class="delete-btn" data-id="${c.id}" data-name="${c.name}" title="Delete">✕</button></td>
         </tr>`)
-        .join("") || `<tr><td colspan="7">No chemicals yet — add one above.</td></tr>`;
+        .join("") || `<tr><td colspan="8">No chemicals yet — add one above.</td></tr>`;
+      syncLocation();
       document.querySelectorAll(".delete-btn").forEach((btn) => {
         btn.onclick = async () => {
           if (!confirm(`Delete ${btn.dataset.name} and its entire history? This can't be undone.`)) return;
@@ -325,6 +356,13 @@
     };
     $("password").addEventListener("keydown", (e) => { if (e.key === "Enter") $("login-btn").click(); });
 
+    // show the selected chemical's current location in the dropdown
+    function syncLocation() {
+      const c = chemicals.find((c) => c.id === parseInt($("chem-select").value));
+      $("loc-select").value = c?.location ?? "";
+    }
+    $("chem-select").onchange = syncLocation;
+
     $("mode-add").onclick = () => setMode("add");
     $("mode-sub").onclick = () => setMode("sub");
     function setMode(m) {
@@ -342,7 +380,11 @@
       try {
         await api("/transactions", {
           method: "POST",
-          body: JSON.stringify({ chemical_id: chemId, delta: mode === "add" ? amt : -amt }),
+          body: JSON.stringify({
+            chemical_id: chemId,
+            delta: mode === "add" ? amt : -amt,
+            location: $("loc-select").value || null,
+          }),
         });
         $("amount").value = "";
         await refresh();
@@ -360,6 +402,7 @@
             name: $("new-name").value,
             unit: $("new-unit").value || "mg",
             initial_amount: parseFloat($("new-initial").value) || 0,
+            location: $("new-location").value || null,
           }),
         });
         $("new-name").value = ""; $("new-initial").value = "0";
