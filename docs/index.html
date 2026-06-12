@@ -159,6 +159,19 @@
       display: none;
     }
 
+    details {
+      margin-top: .75rem;
+    }
+
+    summary {
+      cursor: pointer;
+      font-weight: 600;
+      font-size: .95rem;
+      color: #334155;
+      padding: .35rem 0;
+      user-select: none;
+    }
+
     .delete-btn {
       background: none;
       color: #dc2626;
@@ -237,6 +250,15 @@
               <input id="new-unit" value="mg">
             </div>
             <div>
+              <label for="new-state">State</label>
+              <select id="new-state">
+                <option value="">—</option>
+                <option value="solid">Solid</option>
+                <option value="liquid">Liquid</option>
+                <option value="gas">Gas</option>
+              </select>
+            </div>
+            <div>
               <label for="new-location">Location</label>
               <select id="new-location">
                 <option value="">—</option>
@@ -257,23 +279,7 @@
 
       <div class="card">
         <h1>Inventory</h1>
-        <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Chemical</th>
-              <th>Amount</th>
-              <th>Location</th>
-              <th>Formula</th>
-              <th>MW (g/mol)</th>
-              <th>Density</th>
-              <th>SDS</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="inventory-body"></tbody>
-        </table>
-        </div>
+        <div id="inventory-groups"></div>
       </div>
     </section>
   </main>
@@ -317,8 +323,7 @@
       $("chem-select").innerHTML = chemicals
         .map((c) => `<option value="${c.id}">${c.name}</option>`)
         .join("");
-      $("inventory-body").innerHTML = chemicals
-        .map((c) => `<tr>
+      const rowHtml = (c) => `<tr>
           <td>${c.name}</td>
           <td>${+c.total.toFixed(4)} ${c.unit}</td>
           <td>${c.location ?? "—"}</td>
@@ -329,8 +334,33 @@
             ? `<a href="https://pubchem.ncbi.nlm.nih.gov/compound/${c.cid}#datasheet=LCSS" target="_blank" rel="noopener">SDS ↗</a>`
             : "—"}</td>
           <td><button class="delete-btn" data-id="${c.id}" data-name="${c.name}" title="Delete">✕</button></td>
-        </tr>`)
-        .join("") || `<tr><td colspan="8">No chemicals yet — add one above.</td></tr>`;
+        </tr>`;
+      const groups = [
+        ["solid", "Solids"],
+        ["liquid", "Liquids"],
+        ["gas", "Gases"],
+        [null, "Unclassified"],
+      ];
+      $("inventory-groups").innerHTML = groups
+        .map(([state, label]) => {
+          const rows = chemicals.filter((c) => (c.state ?? null) === state);
+          return `<details open>
+            <summary>${label} (${rows.length})</summary>
+            <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Chemical</th><th>Amount</th><th>Location</th><th>Formula</th>
+                  <th>MW (g/mol)</th><th>Density</th><th>SDS</th><th></th>
+                </tr>
+              </thead>
+              <tbody>${rows.map(rowHtml).join("") ||
+                `<tr><td colspan="8">Nothing here.</td></tr>`}</tbody>
+            </table>
+            </div>
+          </details>`;
+        })
+        .join("");
       syncLocation();
       document.querySelectorAll(".delete-btn").forEach((btn) => {
         btn.onclick = async () => {
@@ -403,6 +433,7 @@
             unit: $("new-unit").value || "mg",
             initial_amount: parseFloat($("new-initial").value) || 0,
             location: $("new-location").value || null,
+            state: $("new-state").value || null,
           }),
         });
         $("new-name").value = ""; $("new-initial").value = "0";
